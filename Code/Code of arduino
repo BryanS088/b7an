@@ -1,0 +1,213 @@
+#include <Servo.h>
+#include <HCSR04.h>
+#include <Pixy2.h>
+
+// Pins for Motor
+int R_IS = 2;
+int R_EN = 5;
+int R_PWM = 6;
+int L_IS = 3;
+int L_EN = 4;
+int L_PWM = 7;
+
+// Define the pins for the ultrasonic sensors
+int LeftSensorPinTrig = 25;
+int LeftSensorPinEcho = 24;
+int RightSensorPinTrig = 22;
+int RightSensorPinEcho = 23;
+int FrontSensorPinTrig = 27;
+int FrontSensorPinEcho = 26;
+
+// Button pin
+int ButtonPin = A0;
+
+// Set the max range for the ultrasonic
+int FrontDistanceRange = 35;
+int LeftDistanceRange = 50;
+int RightDistanceRange = 50;
+
+// ServoMotor
+int ServoPin = 28;
+
+// Set the rotation of the servo
+int LeftServoRotation = 180;
+int RightServoRotation = 0;
+int CenterServoRotation = 90;
+int YellowServoRotation =5;
+// Signature for the PixyCam
+int RedColorSignature = 1;
+int GreenColorSignature = 2;
+int YelloColorSignature  = 3;
+int RedBlackSignature =  4;
+int MargentaColorSignature = 5;
+int GreenBlackSigntaure = 6;
+// Debug
+bool Debug = false;
+bool ButtonEnabled = true; // Enable or disable button for testing purpose
+bool EnableObstacleChallenge  = false;
+// Conditions
+bool ButtonPressed = false;
+bool BotInRotation = false;
+bool BotStopped = false;
+bool YellowPreviuosDetected = false;
+bool ObjectInFront = false;
+bool ObstacleChangelleBotRotated = false; /// define if the bot ready complete the condition of the red or green pilar in the 2er round
+int YellowLinePassed = 0; // Acumulate the yellow line passed (max 12)
+
+int MaxYellowToDetect = 12;
+
+HCSR04 LeftSensor(LeftSensorPinTrig, LeftSensorPinEcho);
+HCSR04 RightSensor(RightSensorPinTrig, RightSensorPinEcho);
+HCSR04 FrontSensor(FrontSensorPinTrig, FrontSensorPinEcho);
+Servo servo;
+Pixy2 pixy;
+
+int DefaultVelocity = 200;
+int VelocityEdge = 255;
+
+int CurrentVelocity = DefaultVelocity;
+
+int AcumuledAngle = CenterServoRotation;
+
+void MotorForward() {
+  analogWrite(R_PWM, 0);
+  analogWrite(L_PWM, CurrentVelocity);
+}
+
+void MotorBackward() {
+  analogWrite(R_PWM, CurrentVelocity);
+  analogWrite(L_PWM, 0);
+}
+
+void ServoRotation(int Angle) {
+  servo.write(Angle);
+}
+
+void setup() {
+  pinMode(R_IS, OUTPUT);
+  pinMode(R_EN, OUTPUT);
+  pinMode(R_PWM, OUTPUT);
+  pinMode(L_IS, OUTPUT);
+  pinMode(L_EN, OUTPUT);
+  pinMode(L_PWM, OUTPUT);
+  digitalWrite(R_IS, LOW);
+  digitalWrite(L_IS, LOW);
+  digitalWrite(R_EN, HIGH);
+  digitalWrite(L_EN, HIGH);
+  servo.attach(ServoPin);
+  pinMode(ButtonPin, INPUT);
+  Serial.begin(9600);
+  
+  Serial.println("Center");
+  // Initialize PixyCam
+  pixy.init();
+  pixy.setLamp(1,0);
+
+  ButtonPressed = false;
+  BotInRotation = false;
+  YellowPreviuosDetected = false;
+  ObjectInFront = false;
+  YellowLinePassed = 0;
+  BotStopped  = false;
+  ObstacleChangelleBotRotated = false;
+  CurrentVelocity = DefaultVelocity;
+  servo.write(CenterServoRotation);   
+
+  if (ButtonEnabled == true) {
+    while (ButtonPressed == false) {
+      int buttonState = 0;
+      buttonState = digitalRead(ButtonPin);
+      Serial.println(buttonState);
+      if (buttonState == 0) {
+        ButtonPressed = true;
+        CurrentVelocity = DefaultVelocity;
+        ServoRotation(CenterServoRotation);
+        Serial.println("ButtonPressed");
+      }
+    }
+  }
+
+
+}
+
+void loop() {
+
+  if (BotStopped == true) {
+    CurrentVelocity = 0;
+    Serial.println(BotStopped);
+    MotorForward();
+    ServoRotation(CenterServoRotation);
+
+    while (BotStopped == true) {
+      return;
+    }
+  }
+ 
+  int FrontDistance = FrontSensor.dist();
+  int LeftDistance = LeftSensor.dist();
+  int RightDistance = RightSensor.dist(); // Get the distance of the ultrasonic sensors
+
+  bool RedBlockDetected = false;
+  bool GreenBlockDetected = false;
+  bool YellowLineDetected = false;
+  bool BlueLineDetected = false;
+  bool MargentaDetected = false;
+  // Get the largest object detected by the PixyCam
+  pixy.ccc.getBlocks();
+  if (pixy.ccc.numBlocks) {
+    for (int i = 0; i < pixy.ccc.numBlocks; i++) {
+      if (pixy.ccc.blocks[i].m_signature == RedColorSignature || pixy.ccc.blocks[i].m_signature == RedBlackSignature  ) {
+        RedBlockDetected = true;
+
+      }
+      if (pixy.ccc.blocks[i].m_signature == GreenColorSignature || pixy.ccc.blocks[i].m_signature == GreenBlackSigntaure ) {
+        GreenBlockDetected = true;
+      }
+      if (pixy.ccc.blocks[i].m_signature == YelloColorSignature) {
+        YellowLineDetected = true;
+      }
+
+       
+
+      if (pixy.ccc.blocks[i].m_signature == MargentaColorSignature) {
+        MargentaDetected = true;
+      }
+    }
+  }
+ 
+ 
+
+  if (YellowPreviuosDetected == true && YellowLineDetected == false ) {
+    YellowLinePassed = YellowLinePassed + 1;
+    YellowPreviuosDetected = false;
+  }
+
+  if (MaxYellowToDetect == YellowLinePassed) {
+    if (EnableObstacleChallenge == true) {
+      // Add code here if needed
+    } else {
+      MotorForward();
+      delay(1000);
+      BotStopped = true;
+      Serial.println("Stopped");
+    }
+  } else if (YellowLinePassed == 7 && EnableObstacleChallenge == true && ObstacleChangelleBotRotated == false) {
+    if (RedBlockDetected == true ) {
+      MotorForward();
+      delay(500);
+      CurrentVelocity  = 20;
+      MotorForward();
+      ServoRotation(180);
+      delay(200);
+      MotorBackward();
+      delay(200);
+      MotorForward();
+      ServoRotation(CenterServoRotation);
+    } else if (GreenBlockDetected == true) {
+      ObstacleChangelleBotRotated = true;
+    }
+  }
+
+  // Short delay
+  delay(100);
+}
