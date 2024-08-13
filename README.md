@@ -1,30 +1,19 @@
-WRO Competition 2024 future engineers Description This repository contains the code and documentation for a car robot built using parts sourced from Amazon and an Arduino kit. The project is developed for the World Robot Olympiad (WRO) competition, aiming to showcase the integration of electromechanical components controlled by Arduino modules.
+My team and I decided to build this vehicle not only because we are incredibly proud of what we've accomplished, but also because it motivates us to continue pursuing our dreams as engineers. Since this is our first time working on a project of this scale, we can genuinely say it was a wonderful and enriching experience.
 
-Modules and Components
+We constructed the vehicle using materials that were already available at our school, which allowed us to make the most of the resources we had. However, we also had to supplement these with some additional materials we purchased from Amazon. Every weekday, we would meet after school to work on improving the vehicle bit by bit, refining our approach as we went along.
 
-Arduino UNO The Arduino UNO serves as the main controller for the car robot. It interacts with various sensors and actuators to execute the robot's functionalities.
+There were definitely challenges along the way. One of the biggest difficulties we faced was not being able to find the parts we needed when we needed them, which slowed down our progress. Additionally, we didn’t have as much time as we would have liked to perfect and practice with the vehicle. Being a small team and this being our first year participating in a competition of this kind, we had a lot to learn in a short amount of time.
 
-Motor Driver Module The motor driver module interfaces between the Arduino UNO and the motors. It regulates the power supplied to the motors based on the signals received from the Arduino, enabling precise control of movement.
+The materials we used included:
 
-Ultrasonic Sensor Module An ultrasonic sensor module is used for obstacle detection. It emits ultrasonic waves and measures the time taken for the waves to bounce back, determining the distance to obstacles in the robot's path.
-
-Line Following Sensor Array The line following sensor array consists of infrared (IR) sensors that detect the contrast between the robot's surface and the line it is meant to follow. It provides feedback to the Arduino UNO for maintaining the robot's path.
-
-Bluetooth Module A Bluetooth module enables wireless communication between the robot and external devices such as smartphones or laptops. It allows for remote control and data monitoring during the competition.
-
-Building/Compiling/Uploading Process Hardware Setup Assemble the Car Robot: Follow the assembly instructions provided with the Arduino kit and additional components.
-
-Connect Modules:
-
-Connect the motor driver module to the motors and power supply. Attach the ultrasonic sensor and line following sensor array to appropriate digital and analog pins on the Arduino UNO. Integrate the Bluetooth module with the UART pins on the Arduino UNO. Software Setup Install Arduino IDE:
-
-Download and install the Arduino IDE from arduino.cc. Download Repository:
-
-Clone or download this repository to your local machine. Open Project in Arduino IDE:
-
-Launch the Arduino IDE. Navigate to File > Open and select the .ino file from this repository. Upload Code to Arduino:
-
-Connect the Arduino UNO to your computer using a USB cable. Select the correct board and port in the Arduino IDE (Tools > Board and Tools > Port). Click the "Upload" button in the Arduino IDE to compile and upload the code to the Arduino UNO. Verify Operation:
-
-Once uploaded, disconnect the Arduino UNO from the computer. Power the robot using a suitable power source. Test the functionality of the robot, including motor control, obstacle detection, and line following using the provided interfaces (Bluetooth or autonomous mode). Contributors List names and roles of team members who contributed to this project. License Specify the license under which this code is distributed (e.g., MIT License). Acknowledgments Acknowledge any individuals or resources that contributed to your project's success.
-
+Pixy Cam2
+Breadboard
+BTN7960 motor driver
+DC Motor
+10kg Servo Motor
+7.4v LiPo Battery
+Switch
+Button
+Ultrasonic Sensor
+Arduino Mega
+In this competition, our goals go beyond just having a good time and gaining valuable experience. We also aspire to advance to the nationals, where we hope to represent our beautiful country, Panama, with pride.
