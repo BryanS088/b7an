@@ -1,6 +1,11 @@
+Round 1
+
 #include <Servo.h>
-#include <HCSR04.h>
+#include <Ultrasonic.h>
+
 #include <Pixy2.h>
+#include <PID_v1.h>
+
 
 // Pins for Motor
 int R_IS = 2;
@@ -13,10 +18,12 @@ int L_PWM = 7;
 // Define the pins for the ultrasonic sensors
 int LeftSensorPinTrig = 25;
 int LeftSensorPinEcho = 24;
-int RightSensorPinTrig = 22;
-int RightSensorPinEcho = 23;
-int FrontSensorPinTrig = 27;
-int FrontSensorPinEcho = 26;
+
+int RightSensorPinTrig = 27;
+int RightSensorPinEcho = 26;
+
+int FrontSensorPinTrig = 53;
+int FrontSensorPinEcho = 52;
 
 // Button pin
 int ButtonPin = A0;
@@ -27,55 +34,39 @@ int LeftDistanceRange = 50;
 int RightDistanceRange = 50;
 
 // ServoMotor
-int ServoPin = 28;
+int ServoPin = 8;
 
 // Set the rotation of the servo
-int LeftServoRotation = 180;
-int RightServoRotation = 0;
+int LeftServoRotation = 155;
+int RightServoRotation = 10;
 int CenterServoRotation = 90;
-int YellowServoRotation =5;
+
 // Signature for the PixyCam
 int RedColorSignature = 1;
 int GreenColorSignature = 2;
-int YelloColorSignature  = 3;
-int RedBlackSignature =  4;
-int MargentaColorSignature = 5;
-int GreenBlackSigntaure = 6;
+//
+int CurrentYellowLine = 0;
+int YellowMax = 12;
+ 
+
 // Debug
 bool Debug = false;
-bool ButtonEnabled = true; // Enable or disable button for testing purpose
-bool EnableObstacleChallenge  = false;
-// Conditions
-bool ButtonPressed = false;
-bool BotInRotation = false;
-bool BotStopped = false;
-bool YellowPreviuosDetected = false;
-bool ObjectInFront = false;
-bool ObstacleChangelleBotRotated = false; /// define if the bot ready complete the condition of the red or green pilar in the 2er round
-int YellowLinePassed = 0; // Acumulate the yellow line passed (max 12)
+// Bools
+bool EnableObstacleChallenge = false;
+bool BotStopped  = false;
+ bool BotInRotation = false;
 
-int MaxYellowToDetect = 12;
-
-HCSR04 LeftSensor(LeftSensorPinTrig, LeftSensorPinEcho);
-HCSR04 RightSensor(RightSensorPinTrig, RightSensorPinEcho);
-HCSR04 FrontSensor(FrontSensorPinTrig, FrontSensorPinEcho);
 Servo servo;
 Pixy2 pixy;
 
-int DefaultVelocity = 200;
-int VelocityEdge = 255;
 
-int CurrentVelocity = DefaultVelocity;
-
-int AcumuledAngle = CenterServoRotation;
-
-void MotorForward() {
-  analogWrite(R_PWM, 0);
-  analogWrite(L_PWM, CurrentVelocity);
+void MotorForward(int Velocity) {
+ analogWrite(R_PWM, 0);
+ analogWrite(L_PWM, Velocity);
 }
 
-void MotorBackward() {
-  analogWrite(R_PWM, CurrentVelocity);
+void MotorBackward(int Velocity) {
+  analogWrite(R_PWM, Velocity);
   analogWrite(L_PWM, 0);
 }
 
@@ -97,117 +88,109 @@ void setup() {
   servo.attach(ServoPin);
   pinMode(ButtonPin, INPUT);
   Serial.begin(9600);
-  
-  Serial.println("Center");
-  // Initialize PixyCam
-  pixy.init();
-  pixy.setLamp(1,0);
+  ServoRotation(CenterServoRotation);
 
-  ButtonPressed = false;
+  pinMode(FrontSensorPinTrig, OUTPUT); // Sets the trigPin as an Output
+  pinMode(FrontSensorPinEcho, INPUT); // Sets the echoPin as an Input
+
+  pinMode(RightSensorPinTrig, OUTPUT); // Sets the trigPin as an Output
+  pinMode(RightSensorPinEcho, INPUT); // Sets the echoPin as an Input
+
+  pinMode(LeftSensorPinTrig, OUTPUT); // Sets the trigPin as an Output
+  pinMode(LeftSensorPinEcho, INPUT); // Sets the echoPin as an Input
+
   BotInRotation = false;
-  YellowPreviuosDetected = false;
-  ObjectInFront = false;
-  YellowLinePassed = 0;
-  BotStopped  = false;
-  ObstacleChangelleBotRotated = false;
-  CurrentVelocity = DefaultVelocity;
-  servo.write(CenterServoRotation);   
 
-  if (ButtonEnabled == true) {
-    while (ButtonPressed == false) {
-      int buttonState = 0;
-      buttonState = digitalRead(ButtonPin);
-      Serial.println(buttonState);
-      if (buttonState == 0) {
-        ButtonPressed = true;
-        CurrentVelocity = DefaultVelocity;
-        ServoRotation(CenterServoRotation);
-        Serial.println("ButtonPressed");
-      }
-    }
-  }
+   
+  // Initialize PixyCam
+ // pixy.init();
+}
+//Ultrasonic FrontSensor(FrontSensorPinTrig, FrontSensorPinEcho);
+//Ultrasonic RightSensor(RightSensorPinTrig, RightSensorPinEcho);
+//Ultrasonic LeftSensor(LeftSensorPinTrig, LeftSensorPinEcho);
+  
 
 
+// MotorForward(Velocidad); = hace que el bot avance
+// MotorBackward(Velocidad); = hace que el bot vaya para atras
+// delay(tiempo en ms) = hace un delay 
+// ServoRotation(Angulo) = hace que el motor vaya a un cierto angulo
+
+int GetUltrasonicDistance(int Echo, int Trig) {
+   // Clears the trigPin
+  digitalWrite(Trig, LOW);
+  delayMicroseconds(2);
+  // Sets the trigPin on HIGH state for 10 microseconds
+  digitalWrite(Trig, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(Trig, LOW);
+  // Reads the echoPin, returns the sound wave travel time in microseconds
+  int duration = pulseIn(Echo, HIGH);
+  // Calculating the distance
+  int distance = duration * 0.034 / 2;
+  return distance;  // This line is correct because the function now returns an int
 }
 
-void loop() {
 
-  if (BotStopped == true) {
-    CurrentVelocity = 0;
-    Serial.println(BotStopped);
-    MotorForward();
-    ServoRotation(CenterServoRotation);
-
-    while (BotStopped == true) {
-      return;
+void OpenChallenge () {
+  // First Edge
+  
+  int FrontDistance = GetUltrasonicDistance(FrontSensorPinEcho,FrontSensorPinTrig);
+  int LeftDistance = GetUltrasonicDistance(LeftSensorPinEcho,LeftSensorPinTrig);
+  int RightDistance = GetUltrasonicDistance(RightSensorPinTrig,RightSensorPinEcho);
+  MotorForward(75);
+  
+  if (LeftDistance < 12 || RightDistance <12) {
+    
+    if (LeftDistance <12) {
+      ServoRotation(40);
+    } else if (RightDistance <12) {
+      ServoRotation(140);
     }
-  }
- 
-  int FrontDistance = FrontSensor.dist();
-  int LeftDistance = LeftSensor.dist();
-  int RightDistance = RightSensor.dist(); // Get the distance of the ultrasonic sensors
 
-  bool RedBlockDetected = false;
-  bool GreenBlockDetected = false;
-  bool YellowLineDetected = false;
-  bool BlueLineDetected = false;
-  bool MargentaDetected = false;
-  // Get the largest object detected by the PixyCam
-  pixy.ccc.getBlocks();
-  if (pixy.ccc.numBlocks) {
-    for (int i = 0; i < pixy.ccc.numBlocks; i++) {
-      if (pixy.ccc.blocks[i].m_signature == RedColorSignature || pixy.ccc.blocks[i].m_signature == RedBlackSignature  ) {
-        RedBlockDetected = true;
 
-      }
-      if (pixy.ccc.blocks[i].m_signature == GreenColorSignature || pixy.ccc.blocks[i].m_signature == GreenBlackSigntaure ) {
-        GreenBlockDetected = true;
-      }
-      if (pixy.ccc.blocks[i].m_signature == YelloColorSignature) {
-        YellowLineDetected = true;
-      }
-
-       
-
-      if (pixy.ccc.blocks[i].m_signature == MargentaColorSignature) {
-        MargentaDetected = true;
-      }
-    }
-  }
- 
- 
-
-  if (YellowPreviuosDetected == true && YellowLineDetected == false ) {
-    YellowLinePassed = YellowLinePassed + 1;
-    YellowPreviuosDetected = false;
-  }
-
-  if (MaxYellowToDetect == YellowLinePassed) {
-    if (EnableObstacleChallenge == true) {
-      // Add code here if needed
-    } else {
-      MotorForward();
+  } else if (FrontDistance <60) {
+    ServoRotation(40);
+    FrontDistance = GetUltrasonicDistance(FrontSensorPinEcho,FrontSensorPinTrig);
+    
+    if (FrontDistance <30) {
+      if (FrontDistance < 10) {
+        ServoRotation(CenterServoRotation);
       delay(1000);
-      BotStopped = true;
-      Serial.println("Stopped");
-    }
-  } else if (YellowLinePassed == 7 && EnableObstacleChallenge == true && ObstacleChangelleBotRotated == false) {
-    if (RedBlockDetected == true ) {
-      MotorForward();
+      MotorBackward(1000);
       delay(500);
-      CurrentVelocity  = 20;
-      MotorForward();
-      ServoRotation(180);
-      delay(200);
-      MotorBackward();
-      delay(200);
-      MotorForward();
-      ServoRotation(CenterServoRotation);
-    } else if (GreenBlockDetected == true) {
-      ObstacleChangelleBotRotated = true;
+      MotorForward(0);
+      } else if (FrontDistance <= 30) {
+        ServoRotation(30);
+      }
     }
+
+
+  } else {
+    ServoRotation(CenterServoRotation);
+  }
+  
+  delay(100);
+
+}
+ 
+int Loop = 1;
+
+void loop() {
+  
+  
+  if (BotStopped == true) {
+    return;
   }
 
-  // Short delay
-  delay(100);
+  if (EnableObstacleChallenge == false) {
+    
+    OpenChallenge();  
+     
+  } else if (EnableObstacleChallenge == true) {
+    Serial.println(31);
+  }
+  
+
+
 }
