@@ -1,68 +1,43 @@
 Round 1
 
 #include <Servo.h>
-#include <Ultrasonic.h>
 
-#include <Pixy2.h>
-#include <PID_v1.h>
+// Crear un objeto Servo
+Servo miServo;
 
+// Definir el pin al que está conectado el servo
+const int pinServo = 8;
 
-// Pins for Motor
-int R_IS = 2;
-int R_EN = 5;
-int R_PWM = 6;
-int L_IS = 3;
-int L_EN = 4;
-int L_PWM = 7;
+// Definir los pines del módulo BTN7960
+const int R_EN = 5;
+const int R_PWM = 6;
+const int L_EN = 4;
+const int L_PWM = 7;
 
-// Define the pins for the ultrasonic sensors
-int LeftSensorPinTrig = 25;
-int LeftSensorPinEcho = 24;
+// Variable de control para asegurarse de que el código se ejecute una vez
+bool codeExecuted = false;
 
-int RightSensorPinTrig = 27;
-int RightSensorPinEcho = 26;
-
-int FrontSensorPinTrig = 53;
-int FrontSensorPinEcho = 52;
-
-// Button pin
-int ButtonPin = A0;
-
-// Set the max range for the ultrasonic
-int FrontDistanceRange = 35;
-int LeftDistanceRange = 50;
-int RightDistanceRange = 50;
-
-// ServoMotor
-int ServoPin = 8;
-
-// Set the rotation of the servo
-int LeftServoRotation = 155;
-int RightServoRotation = 10;
-int CenterServoRotation = 90;
-
-// Signature for the PixyCam
-int RedColorSignature = 1;
-int GreenColorSignature = 2;
-//
-int CurrentYellowLine = 0;
-int YellowMax = 12;
- 
-
-// Debug
-bool Debug = false;
-// Bools
-bool EnableObstacleChallenge = false;
-bool BotStopped  = false;
- bool BotInRotation = false;
-
-Servo servo;
-Pixy2 pixy;
-
+void setup() {
+  // Iniciar la comunicación serial a 9600 baudios
+  Serial.begin(9600);
+  
+  // Adjuntar el servo al pin 8
+  miServo.attach(pinServo);
+  
+  // Configurar pines del módulo BTN7960 como salidas
+  pinMode(R_EN, OUTPUT);
+  pinMode(R_PWM, OUTPUT);
+  pinMode(L_EN, OUTPUT);
+  pinMode(L_PWM, OUTPUT);
+  
+  // Inicializar el módulo BTN7960
+  digitalWrite(R_EN, HIGH); // Habilitar módulo derecho
+  digitalWrite(L_EN, HIGH); // Habilitar módulo izquierdo
+}
 
 void MotorForward(int Velocity) {
- analogWrite(R_PWM, 0);
- analogWrite(L_PWM, Velocity);
+  analogWrite(R_PWM, 0);
+  analogWrite(L_PWM, Velocity);
 }
 
 void MotorBackward(int Velocity) {
@@ -70,127 +45,179 @@ void MotorBackward(int Velocity) {
   analogWrite(L_PWM, 0);
 }
 
-void ServoRotation(int Angle) {
-  servo.write(Angle);
-}
-
-void setup() {
-  pinMode(R_IS, OUTPUT);
-  pinMode(R_EN, OUTPUT);
-  pinMode(R_PWM, OUTPUT);
-  pinMode(L_IS, OUTPUT);
-  pinMode(L_EN, OUTPUT);
-  pinMode(L_PWM, OUTPUT);
-  digitalWrite(R_IS, LOW);
-  digitalWrite(L_IS, LOW);
-  digitalWrite(R_EN, HIGH);
-  digitalWrite(L_EN, HIGH);
-  servo.attach(ServoPin);
-  pinMode(ButtonPin, INPUT);
-  Serial.begin(9600);
-  ServoRotation(CenterServoRotation);
-
-  pinMode(FrontSensorPinTrig, OUTPUT); // Sets the trigPin as an Output
-  pinMode(FrontSensorPinEcho, INPUT); // Sets the echoPin as an Input
-
-  pinMode(RightSensorPinTrig, OUTPUT); // Sets the trigPin as an Output
-  pinMode(RightSensorPinEcho, INPUT); // Sets the echoPin as an Input
-
-  pinMode(LeftSensorPinTrig, OUTPUT); // Sets the trigPin as an Output
-  pinMode(LeftSensorPinEcho, INPUT); // Sets the echoPin as an Input
-
-  BotInRotation = false;
-
-   
-  // Initialize PixyCam
- // pixy.init();
-}
-//Ultrasonic FrontSensor(FrontSensorPinTrig, FrontSensorPinEcho);
-//Ultrasonic RightSensor(RightSensorPinTrig, RightSensorPinEcho);
-//Ultrasonic LeftSensor(LeftSensorPinTrig, LeftSensorPinEcho);
-  
-
-
-// MotorForward(Velocidad); = hace que el bot avance
-// MotorBackward(Velocidad); = hace que el bot vaya para atras
-// delay(tiempo en ms) = hace un delay 
-// ServoRotation(Angulo) = hace que el motor vaya a un cierto angulo
-
-int GetUltrasonicDistance(int Echo, int Trig) {
-   // Clears the trigPin
-  digitalWrite(Trig, LOW);
-  delayMicroseconds(2);
-  // Sets the trigPin on HIGH state for 10 microseconds
-  digitalWrite(Trig, HIGH);
-  delayMicroseconds(10);
-  digitalWrite(Trig, LOW);
-  // Reads the echoPin, returns the sound wave travel time in microseconds
-  int duration = pulseIn(Echo, HIGH);
-  // Calculating the distance
-  int distance = duration * 0.034 / 2;
-  return distance;  // This line is correct because the function now returns an int
-}
-
-
-void OpenChallenge () {
-  // First Edge
-  
-  int FrontDistance = GetUltrasonicDistance(FrontSensorPinEcho,FrontSensorPinTrig);
-  int LeftDistance = GetUltrasonicDistance(LeftSensorPinEcho,LeftSensorPinTrig);
-  int RightDistance = GetUltrasonicDistance(RightSensorPinTrig,RightSensorPinEcho);
-  MotorForward(75);
-  
-  if (LeftDistance < 12 || RightDistance <12) {
-    
-    if (LeftDistance <12) {
-      ServoRotation(40);
-    } else if (RightDistance <12) {
-      ServoRotation(140);
-    }
-
-
-  } else if (FrontDistance <60) {
-    ServoRotation(40);
-    FrontDistance = GetUltrasonicDistance(FrontSensorPinEcho,FrontSensorPinTrig);
-    
-    if (FrontDistance <30) {
-      if (FrontDistance < 10) {
-        ServoRotation(CenterServoRotation);
-      delay(1000);
-      MotorBackward(1000);
-      delay(500);
-      MotorForward(0);
-      } else if (FrontDistance <= 30) {
-        ServoRotation(30);
-      }
-    }
-
-
-  } else {
-    ServoRotation(CenterServoRotation);
-  }
-  
-  delay(100);
-
-}
- 
-int Loop = 1;
-
 void loop() {
-  
-  
-  if (BotStopped == true) {
-    return;
-  }
+  // Solo se ejecuta si codeExecuted es falso
+  if (!codeExecuted) {
+// Giro 1
+   miServo.write(60);       // centro 1 segundo
+    delay(1000); 
+      MotorForward(120);       // Avanza 2 segundo
+    delay(1600);
 
-  if (EnableObstacleChallenge == false) {
+  miServo.write(110);       // centro 1 segundo
+    delay(500); 
+      MotorForward(120);       // Avanza 2 segundo
+    delay(100);
+
+    miServo.write(60);       // centro 1 segundo
+    delay(1000); 
+
+    // Detener el robot al final de las vueltas
+    MotorBackward(200);
+    delay(100);
+    MotorForward(0);
+    delay(1100);  
+    // Pausa al final para detener el robot por completo
+
+ miServo.write(60);       // centro 1 segundo
+    delay(1000); 
+      MotorForward(120);       // Avanza 2 segundo
+    delay(1000);
+
+  miServo.write(110);       // centro 1 segundo
+    delay(800); 
+      MotorForward(180);       // Avanza 2 segundo
+    delay(100);
     
-    OpenChallenge();  
-     
-  } else if (EnableObstacleChallenge == true) {
-    Serial.println(31);
+    miServo.write(60);       // centro 1 segundo
+    delay(1000); 
+
+ // Detener el robot al final de las vueltas
+
+    MotorBackward(200);
+    delay(100);
+    MotorForward(0);
+    delay(1100); 
+
+     // Pausa al final para detener el robot por completo
+
+      miServo.write(60);       // centro 1 segundo
+    delay(1000); 
+      MotorForward(120);       // Avanza 2 segundo
+    delay(1000);
+
+  miServo.write(110);       // centro 1 segundo
+    delay(800); 
+      MotorForward(180);       // Avanza 2 segundo
+    delay(100);
+    
+    miServo.write(60);       // centro 1 segundo
+    delay(1000); 
+
+// Detener el robot al final de las vueltas
+
+    MotorBackward(200);
+    delay(100);
+    MotorForward(0);
+    delay(1100); 
+
+     // Pausa al final para detener el robot por completo
+
+// Giro 2
+   miServo.write(60);       // centro 1 segundo
+    delay(1000); 
+      MotorForward(120);       // Avanza 2 segundo
+    delay(1200);
+
+  miServo.write(110);       // centro 1 segundo
+    delay(500); 
+      MotorForward(120);       // Avanza 2 segundo
+    delay(100);
+
+    miServo.write(60);       // centro 1 segundo
+    delay(1000); 
+    // Detener el robot al final de las vueltas
+    MotorBackward(200);
+    delay(100);
+    MotorForward(0);
+    delay(1100);  
+    // Pausa al final para detener el robot por completo
+
+ miServo.write(60);       // centro 1 segundo
+    delay(1000); 
+      MotorForward(120);       // Avanza 2 segundo
+    delay(1000);
+
+  miServo.write(110);       // centro 1 segundo
+    delay(800); 
+      MotorForward(180);       // Avanza 2 segundo
+    delay(100);
+    
+    miServo.write(60);       // centro 1 segundo
+    delay(1000); 
+
+ // Detener el robot al final de las vueltas
+    MotorBackward(200);
+    delay(100);
+    MotorForward(0);
+    delay(1100); 
+     // Pausa al final para detener el robot por completo
+
+      miServo.write(60);       // centro 1 segundo
+    delay(1000); 
+      MotorForward(120);       // Avanza 2 segundo
+    delay(1000);
+
+  miServo.write(110);       // centro 1 segundo
+    delay(800); 
+      MotorForward(180);       // Avanza 2 segundo
+    delay(100);
+    
+    miServo.write(60);       // centro 1 segundo
+    delay(1000); 
+    
+// Detener el robot al final de las vueltas
+    MotorBackward(200);
+    delay(100);
+    MotorForward(0);
+    delay(1100); 
+     // Pausa al final para detener el robot por completo
+
+      miServo.write(60);       // centro 1 segundo
+    delay(1000); 
+      MotorForward(120);       // Avanza 2 segundo
+    delay(1000);
+
+  miServo.write(110);       // centro 1 segundo
+    delay(800); 
+      MotorForward(180);       // Avanza 2 segundo
+    delay(100);
+    
+    miServo.write(60);       // centro 1 segundo
+    delay(1000); 
+
+ // Detener el robot al final de las vueltas
+    MotorBackward(200);
+    delay(100);
+    MotorForward(0);
+    delay(1100); 
+     // Pausa al final para detener el robot por completo
+
+      miServo.write(60);       // centro 1 segundo
+    delay(1000); 
+      MotorForward(120);       // Avanza 2 segundo
+    delay(1000);
+
+  miServo.write(110);       // centro 1 segundo
+    delay(800); 
+      MotorForward(180);       // Avanza 2 segundo
+    delay(100);
+    
+    miServo.write(60);       // centro 1 segundo
+    delay(1000); 
+    
+// Detener el robot al final de las vueltas
+    MotorBackward(200);
+    delay(100);
+    MotorForward(0);
+    delay(1100); 
+     // Pausa al final para detener el robot por completo
+
+  // Detener el robot al final de las vueltas
+    MotorForward(0);
+    delay(1100);  // Pausa al final para detener el robot por completo
+    // Establecer la variable de control en true para evitar futuras ejecuciones
+    codeExecuted = true;
   }
-  
-
-
+  // El resto del código en loop() permanecerá vacío o incluirá acciones que desees ejecutar continuamente
 }
